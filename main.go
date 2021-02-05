@@ -544,7 +544,7 @@ func main() {
 			if found {
 				log.Printf("device already registered")
 			} else {
-				delete(testDevices, device)
+				delete(testDevices, testDevice)
 				log.Printf("registering device")
 				//reqiOS := appstoreconnect.DeviceCreateRequest{
 				//	Data: appstoreconnect.DeviceCreateRequestData{
