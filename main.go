@@ -559,7 +559,7 @@ func main() {
 					Data: appstoreconnect.DeviceCreateRequestData{
 						Attributes: appstoreconnect.DeviceCreateRequestDataAttributes{
 							Name:     "Bitrise test device",
-							Platform: appstoreconnect.MAC_OS,
+							Platform: appstoreconnect.MacOS,
 							UDID:     testDevice.DeviceID,
 						},
 						Type: "devices",
