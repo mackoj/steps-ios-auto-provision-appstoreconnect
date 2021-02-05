@@ -592,7 +592,6 @@ func main() {
 	})
 	log.Printf("afterFilter - devices.len %d", len(devices))
 
-
 	// Ensure Profiles
 	type CodesignSettings struct {
 		ProfilesByBundleID map[string]appstoreconnect.Profile
