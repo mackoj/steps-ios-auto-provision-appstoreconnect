@@ -511,6 +511,68 @@ func main() {
 	// Ensure devices
 	var devices []appstoreconnect.Device
 
+		if needToRegisterDevices(distrTypes) && conn != nil {
+		fmt.Println()
+		log.Infof("Checking if %d Bitrise test device(s) are registered on Developer Portal", len(conn.TestDevices))
+
+		for _, d := range conn.TestDevices {
+			log.Debugf("- %s", d)
+		}
+
+		var err error
+		devices, err = autoprovision.ListDevices(client, "", appstoreconnect.IOSDevice)
+		if err != nil {
+			failf("Failed to list devices: %s", err)
+		}
+
+		log.Printf("%d devices are registered on Developer Portal", len(devices))
+		for _, d := range devices {
+			log.Debugf("- %s, %s UDID (%s), ID (%s)", d.Attributes.Name, d.Attributes.DeviceClass, d.Attributes.UDID, d.ID)
+		}
+
+		for _, testDevice := range conn.TestDevices {
+			log.Printf("checking if the device (%s) is registered", testDevice.DeviceID)
+
+			found := false
+			for _, device := range devices {
+				if device.Attributes.UDID == testDevice.DeviceID {
+					found = true
+					break
+				}
+			}
+
+			if found {
+				log.Printf("device already registered")
+			} else {
+				log.Printf("registering device")
+				reqiOS := appstoreconnect.DeviceCreateRequest{
+					Data: appstoreconnect.DeviceCreateRequestData{
+						Attributes: appstoreconnect.DeviceCreateRequestDataAttributes{
+							Name:     "Bitrise test device",
+							Platform: appstoreconnect.IOS,
+							UDID:     testDevice.DeviceID,
+						},
+						Type: "devices",
+					},
+				}
+				reqMac := appstoreconnect.DeviceCreateRequest{
+					Data: appstoreconnect.DeviceCreateRequestData{
+						Attributes: appstoreconnect.DeviceCreateRequestDataAttributes{
+							Name:     "Bitrise test device",
+							Platform: appstoreconnect.MAC_OS,
+							UDID:     testDevice.DeviceID,
+						},
+						Type: "devices",
+					},
+				}
+				if _, err := client.Provisioning.RegisterNewDevice(reqiOS); err != nil {
+					log.Printf("Failed to register iOS device: %s", err)
+				} else if _, err := client.Provisioning.RegisterNewDevice(reqMac); err != nil {
+					log.Printf("Failed to register macOS device: %s", err)
+				}
+			}
+		}
+	}
 
 	// Ensure Profiles
 	type CodesignSettings struct {
