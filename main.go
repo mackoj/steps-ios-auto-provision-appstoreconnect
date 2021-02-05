@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -584,11 +585,13 @@ func main() {
 		}
 	}
 
+	spew.Dump(devices)
 	devices = Filter(devices, func(device appstoreconnect.Device) bool {
 		b := Contains(device, toDelete) == false
 		return  b
 		//return device.Attributes.UDID != "C81BDFE8-1601-5EC9-B419-6F2F23D3C443"
 	})
+	spew.Dump(devices)
 
 	// Ensure Profiles
 	type CodesignSettings struct {
