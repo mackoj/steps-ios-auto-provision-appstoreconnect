@@ -511,58 +511,6 @@ func main() {
 	// Ensure devices
 	var devices []appstoreconnect.Device
 
-	if needToRegisterDevices(distrTypes) && conn != nil {
-		fmt.Println()
-		log.Infof("Checking if %d Bitrise test device(s) are registered on Developer Portal", len(conn.TestDevices))
-
-		for _, d := range conn.TestDevices {
-			log.Debugf("- %s", d)
-		}
-
-		var err error
-		devices, err = autoprovision.ListDevices(client, "", appstoreconnect.IOSDevice)
-		if err != nil {
-			failf("Failed to list devices: %s", err)
-		}
-
-		log.Printf("%d devices are registered on Developer Portal", len(devices))
-		for _, d := range devices {
-			log.Debugf("- %s, %s UDID (%s), ID (%s)", d.Attributes.Name, d.Attributes.DeviceClass, d.Attributes.UDID, d.ID)
-		}
-
-		for _, testDevice := range conn.TestDevices {
-			log.Printf("checking if the device (%s) is registered", testDevice.DeviceID)
-
-			found := false
-			for _, device := range devices {
-				if device.Attributes.UDID == testDevice.DeviceID {
-					found = true
-					break
-				}
-			}
-
-			if found {
-				log.Printf("device already registered")
-			} else {
-				log.Printf("registering device")
-				req := appstoreconnect.DeviceCreateRequest{
-					Data: appstoreconnect.DeviceCreateRequestData{
-						Attributes: appstoreconnect.DeviceCreateRequestDataAttributes{
-							Name:     "Bitrise test device",
-							Platform: appstoreconnect.IOS,
-							UDID:     testDevice.DeviceID,
-						},
-						Type: "devices",
-					},
-				}
-
-				client.Provisioning.RegisterNewDevice(req);
-				//if _, err := client.Provisioning.RegisterNewDevice(req); err != nil {
-				//	failf("Failed to register device: %s", err)
-				//}
-			}
-		}
-	}
 
 	// Ensure Profiles
 	type CodesignSettings struct {
