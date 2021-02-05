@@ -347,7 +347,7 @@ func handleSessionDataError(err error) {
 		return
 	}
 
-if networkErr, ok := err.(devportalservice.NetworkError); ok && networkErr.Status == http.StatusUnauthorized {
+	if networkErr, ok := err.(devportalservice.NetworkError); ok && networkErr.Status == http.StatusUnauthorized {
 		fmt.Println()
 		log.Warnf("%s", "Unauthorized to query Connected Apple Developer Portal Account. This happens by design, with a public app's PR build, to protect secrets.")
 
@@ -389,7 +389,7 @@ func main() {
 	if stepConf.BuildURL != "" && stepConf.BuildAPIToken != "" {
 		devportalConnectionProvider = devportalservice.NewBitriseClient(http.DefaultClient, stepConf.BuildURL, string(stepConf.BuildAPIToken))
 	} else {
-                fmt.Println()
+		fmt.Println()
 		log.Warnf("Connected Apple Developer Portal Account not found. Step is not running on bitrise.io: BITRISE_BUILD_URL and BITRISE_BUILD_API_TOKEN envs are not set")
 	}
 	var conn *devportalservice.AppleDeveloperConnection
@@ -510,12 +510,12 @@ func main() {
 
 	// Ensure devices
 	var devices []appstoreconnect.Device
-
-		if needToRegisterDevices(distrTypes) && conn != nil {
+	testDevices := conn.TestDevices
+	if needToRegisterDevices(distrTypes) && conn != nil {
 		fmt.Println()
-		log.Infof("Checking if %d Bitrise test device(s) are registered on Developer Portal", len(conn.TestDevices))
+		log.Infof("Checking if %d Bitrise test device(s) are registered on Developer Portal", len(testDevices))
 
-		for _, d := range conn.TestDevices {
+		for _, d := range testDevices {
 			log.Debugf("- %s", d)
 		}
 
@@ -530,7 +530,7 @@ func main() {
 			log.Debugf("- %s, %s UDID (%s), ID (%s)", d.Attributes.Name, d.Attributes.DeviceClass, d.Attributes.UDID, d.ID)
 		}
 
-		for _, testDevice := range conn.TestDevices {
+		for _, testDevice := range testDevices {
 			log.Printf("checking if the device (%s) is registered", testDevice.DeviceID)
 
 			found := false
@@ -544,32 +544,35 @@ func main() {
 			if found {
 				log.Printf("device already registered")
 			} else {
+				delete(testDevices, device)
 				log.Printf("registering device")
-				reqiOS := appstoreconnect.DeviceCreateRequest{
-					Data: appstoreconnect.DeviceCreateRequestData{
-						Attributes: appstoreconnect.DeviceCreateRequestDataAttributes{
-							Name:     "Bitrise test device",
-							Platform: appstoreconnect.IOS,
-							UDID:     testDevice.DeviceID,
-						},
-						Type: "devices",
-					},
-				}
-				reqMac := appstoreconnect.DeviceCreateRequest{
-					Data: appstoreconnect.DeviceCreateRequestData{
-						Attributes: appstoreconnect.DeviceCreateRequestDataAttributes{
-							Name:     "Bitrise test device",
-							Platform: appstoreconnect.MacOS,
-							UDID:     testDevice.DeviceID,
-						},
-						Type: "devices",
-					},
-				}
-				if _, err := client.Provisioning.RegisterNewDevice(reqiOS); err != nil {
-					log.Printf("Failed to register iOS device: %s", err)
-				} else if _, err := client.Provisioning.RegisterNewDevice(reqMac); err != nil {
-					log.Printf("Failed to register macOS device: %s", err)
-				}
+				//reqiOS := appstoreconnect.DeviceCreateRequest{
+				//	Data: appstoreconnect.DeviceCreateRequestData{
+				//		Attributes: appstoreconnect.DeviceCreateRequestDataAttributes{
+				//			Name:     "Bitrise test device",
+				//			Platform: appstoreconnect.IOS,
+				//			UDID:     testDevice.DeviceID,
+				//		},
+				//		Type: "devices",
+				//	},
+				//}
+				//reqMac := appstoreconnect.DeviceCreateRequest{
+				//	Data: appstoreconnect.DeviceCreateRequestData{
+				//		Attributes: appstoreconnect.DeviceCreateRequestDataAttributes{
+				//			Name:     "Bitrise test device",
+				//			Platform: appstoreconnect.MacOS,
+				//			UDID:     testDevice.DeviceID,
+				//		},
+				//		Type: "devices",
+				//	},
+				//}
+				//if _, err := client.Provisioning.RegisterNewDevice(reqiOS); err != nil {
+				//	delete(testDevices, device)
+				//	log.Printf("Failed to register iOS device: %s", err)
+				//} else if _, err := client.Provisioning.RegisterNewDevice(reqMac); err != nil {
+				//	delete(testDevices, device)
+				//	log.Printf("Failed to register macOS device: %s", err)
+				//}
 			}
 		}
 	}
