@@ -556,9 +556,9 @@ func main() {
 					},
 				}
 
-				if _, err := client.Provisioning.RegisterNewDevice(req); err != nil {
-					failf("Failed to register device: %s", err)
-				}
+				// if _, err := client.Provisioning.RegisterNewDevice(req); err != nil {
+				//	failf("Failed to register device: %s", err)
+				//}
 			}
 		}
 	}
