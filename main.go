@@ -585,12 +585,13 @@ func main() {
 		}
 	}
 
-	spew.Dump(devices)
+	log.Printf("beforeFilter - devices.len %d", len(devices))
 	devices = Filter(devices, func(device appstoreconnect.Device) bool {
 		b := Contains(device, toDelete) == false
 		return  b
 		//return device.Attributes.UDID != "C81BDFE8-1601-5EC9-B419-6F2F23D3C443"
 	})
+	log.Printf("afterFilter - devices.len %d", len(devices))
 	spew.Dump(devices)
 
 	// Ensure Profiles
