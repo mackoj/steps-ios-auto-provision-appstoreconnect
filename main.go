@@ -369,6 +369,15 @@ func Filter(vs []appstoreconnect.Device, f func(appstoreconnect.Device) bool) []
 	return vsf
 }
 
+func Contains(s appstoreconnect.Device, e []string) bool {
+	for _, a := range e {
+		if a == s.Attributes.UDID {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
 	var stepConf Config
 	if err := stepconf.Parse(&stepConf); err != nil {
@@ -520,12 +529,13 @@ func main() {
 
 	// Ensure devices
 	var devices []appstoreconnect.Device
-	testDevices := conn.TestDevices
+	var toDelete []string
+
 	if needToRegisterDevices(distrTypes) && conn != nil {
 		fmt.Println()
-		log.Infof("Checking if %d Bitrise test device(s) are registered on Developer Portal", len(testDevices))
+		log.Infof("Checking if %d Bitrise test device(s) are registered on Developer Portal", len(conn.TestDevices))
 
-		for _, d := range testDevices {
+		for _, d := range conn.TestDevices {
 			log.Debugf("- %s", d)
 		}
 
@@ -540,8 +550,7 @@ func main() {
 			log.Debugf("- %s, %s UDID (%s), ID (%s)", d.Attributes.Name, d.Attributes.DeviceClass, d.Attributes.UDID, d.ID)
 		}
 
-		temp := testDevices[:0]
-		for _, testDevice := range testDevices {
+		for _, testDevice := range conn.TestDevices {
 			log.Printf("checking if the device (%s) is registered", testDevice.DeviceID)
 
 			found := false
@@ -553,47 +562,32 @@ func main() {
 			}
 
 			if found {
-				temp = append(temp, testDevice)
 				log.Printf("device already registered")
 			} else {
-				// testDevices == []devportalservice.TestDevice
-				//
-				//delete(testDevices, testDevice)
-				log.Printf("registering device (%s)", testDevice.DeviceID)
-				//reqiOS := appstoreconnect.DeviceCreateRequest{
-				//	Data: appstoreconnect.DeviceCreateRequestData{
-				//		Attributes: appstoreconnect.DeviceCreateRequestDataAttributes{
-				//			Name:     "Bitrise test device",
-				//			Platform: appstoreconnect.IOS,
-				//			UDID:     testDevice.DeviceID,
-				//		},
-				//		Type: "devices",
-				//	},
-				//}
-				//reqMac := appstoreconnect.DeviceCreateRequest{
-				//	Data: appstoreconnect.DeviceCreateRequestData{
-				//		Attributes: appstoreconnect.DeviceCreateRequestDataAttributes{
-				//			Name:     "Bitrise test device",
-				//			Platform: appstoreconnect.MacOS,
-				//			UDID:     testDevice.DeviceID,
-				//		},
-				//		Type: "devices",
-				//	},
-				//}
-				//if _, err := client.Provisioning.RegisterNewDevice(reqiOS); err != nil {
-				//	delete(testDevices, device)
-				//	log.Printf("Failed to register iOS device: %s", err)
-				//} else if _, err := client.Provisioning.RegisterNewDevice(reqMac); err != nil {
-				//	delete(testDevices, device)
-				//	log.Printf("Failed to register macOS device: %s", err)
-				//}
+				log.Printf("registering device")
+				req := appstoreconnect.DeviceCreateRequest{
+					Data: appstoreconnect.DeviceCreateRequestData{
+						Attributes: appstoreconnect.DeviceCreateRequestDataAttributes{
+							Name:     "Bitrise test device",
+							Platform: appstoreconnect.IOS,
+							UDID:     testDevice.DeviceID,
+						},
+						Type: "devices",
+					},
+				}
+
+				if _, err := client.Provisioning.RegisterNewDevice(req); err != nil {
+					toDelete = append(toDelete, testDevice.DeviceID)
+					log.Printf("Failed to register iOS device: %s", err)
+				}
 			}
 		}
-		testDevices = temp
 	}
 
 	devices = Filter(devices, func(device appstoreconnect.Device) bool {
-		return device.Attributes.UDID != "C81BDFE8-1601-5EC9-B419-6F2F23D3C443"
+		b := Contains(device, toDelete) == false
+		return  b
+		//return device.Attributes.UDID != "C81BDFE8-1601-5EC9-B419-6F2F23D3C443"
 	})
 
 	// Ensure Profiles
