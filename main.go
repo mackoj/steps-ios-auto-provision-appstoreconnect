@@ -359,6 +359,16 @@ func handleSessionDataError(err error) {
 	log.Warnf("Read more: https://devcenter.bitrise.io/getting-started/configuring-bitrise-steps-that-require-apple-developer-account-data/")
 }
 
+func Filter(vs []appstoreconnect.Device, f func(appstoreconnect.Device) bool) []appstoreconnect.Device {
+	vsf := make([]appstoreconnect.Device, 0)
+	for _, v := range vs {
+		if f(v) {
+			vsf = append(vsf, v)
+		}
+	}
+	return vsf
+}
+
 func main() {
 	var stepConf Config
 	if err := stepconf.Parse(&stepConf); err != nil {
@@ -530,6 +540,7 @@ func main() {
 			log.Debugf("- %s, %s UDID (%s), ID (%s)", d.Attributes.Name, d.Attributes.DeviceClass, d.Attributes.UDID, d.ID)
 		}
 
+		temp := testDevices[:0]
 		for _, testDevice := range testDevices {
 			log.Printf("checking if the device (%s) is registered", testDevice.DeviceID)
 
@@ -542,10 +553,13 @@ func main() {
 			}
 
 			if found {
+				temp = append(temp, testDevice)
 				log.Printf("device already registered")
 			} else {
-				delete(testDevices, testDevice)
-				log.Printf("registering device")
+				// testDevices == []devportalservice.TestDevice
+				//
+				//delete(testDevices, testDevice)
+				log.Printf("registering device (%s)", testDevice.DeviceID)
 				//reqiOS := appstoreconnect.DeviceCreateRequest{
 				//	Data: appstoreconnect.DeviceCreateRequestData{
 				//		Attributes: appstoreconnect.DeviceCreateRequestDataAttributes{
@@ -575,7 +589,12 @@ func main() {
 				//}
 			}
 		}
+		testDevices = temp
 	}
+
+	devices = Filter(devices, func(device appstoreconnect.Device) bool {
+		return device.Attributes.UDID != "C81BDFE8-1601-5EC9-B419-6F2F23D3C443"
+	})
 
 	// Ensure Profiles
 	type CodesignSettings struct {
