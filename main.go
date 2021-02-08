@@ -347,7 +347,7 @@ func handleSessionDataError(err error) {
 		return
 	}
 
-if networkErr, ok := err.(devportalservice.NetworkError); ok && networkErr.Status == http.StatusUnauthorized {
+	if networkErr, ok := err.(devportalservice.NetworkError); ok && networkErr.Status == http.StatusUnauthorized {
 		fmt.Println()
 		log.Warnf("%s", "Unauthorized to query Connected Apple Developer Portal Account. This happens by design, with a public app's PR build, to protect secrets.")
 
@@ -357,6 +357,25 @@ if networkErr, ok := err.(devportalservice.NetworkError); ok && networkErr.Statu
 	fmt.Println()
 	log.Errorf("Failed to activate Bitrise Apple Developer Portal connection: %s", err)
 	log.Warnf("Read more: https://devcenter.bitrise.io/getting-started/configuring-bitrise-steps-that-require-apple-developer-account-data/")
+}
+
+func Filter(vs []appstoreconnect.Device, f func(appstoreconnect.Device) bool) []appstoreconnect.Device {
+	vsf := make([]appstoreconnect.Device, 0)
+	for _, v := range vs {
+		if f(v) {
+			vsf = append(vsf, v)
+		}
+	}
+	return vsf
+}
+
+func Contains(s appstoreconnect.Device, e []string) bool {
+	for _, a := range e {
+		if a == s.Attributes.UDID {
+			return true
+		}
+	}
+	return false
 }
 
 func main() {
@@ -389,7 +408,7 @@ func main() {
 	if stepConf.BuildURL != "" && stepConf.BuildAPIToken != "" {
 		devportalConnectionProvider = devportalservice.NewBitriseClient(http.DefaultClient, stepConf.BuildURL, string(stepConf.BuildAPIToken))
 	} else {
-                fmt.Println()
+		fmt.Println()
 		log.Warnf("Connected Apple Developer Portal Account not found. Step is not running on bitrise.io: BITRISE_BUILD_URL and BITRISE_BUILD_API_TOKEN envs are not set")
 	}
 	var conn *devportalservice.AppleDeveloperConnection
@@ -510,6 +529,7 @@ func main() {
 
 	// Ensure devices
 	var devices []appstoreconnect.Device
+	var toDelete []string
 
 	if needToRegisterDevices(distrTypes) && conn != nil {
 		fmt.Println()
@@ -557,11 +577,20 @@ func main() {
 				}
 
 				if _, err := client.Provisioning.RegisterNewDevice(req); err != nil {
-					failf("Failed to register device: %s", err)
+					toDelete = append(toDelete, testDevice.DeviceID)
+					log.Printf("Failed to register iOS device: %s", err)
 				}
 			}
 		}
 	}
+
+	// Useless ?
+	log.Printf("beforeFilter - devices.len %d", len(devices))
+	devices = Filter(devices, func(device appstoreconnect.Device) bool {
+		b := Contains(device, toDelete) == false
+		return  b
+	})
+	log.Printf("afterFilter - devices.len %d", len(devices))
 
 	// Ensure Profiles
 	type CodesignSettings struct {
@@ -691,9 +720,9 @@ func main() {
 			failf("Failed to apply code sign settings for target (%s): %s", target.Name, err)
 		}
 
-		if err := projHelper.XcProj.Save(); err != nil {
-			failf("Failed to save project: %s", err)
-		}
+		//if err := projHelper.XcProj.Save(); err != nil {
+		//	failf("Failed to save project: %s", err)
+		//}
 
 	}
 
